@@ -7,15 +7,15 @@ import { useEffect, useRef } from "react";
 const IDLE_RGB: [number, number, number] = [170, 182, 196];
 const HOT_RGB: [number, number, number] = [0, 51, 160];
 
-const COL_COUNT = 120;
-const ROW_COUNT = 12;
+const COL_COUNT = 160;
+const ROW_COUNT = 18;
 
 // Per-cell bar geometry is randomized at init and stays stable
 // so the facade reads as an intentional layout, not noise.
 const MIN_BAR_W = 1;
 const MAX_BAR_W = 3;
-const MIN_HEIGHT_FRAC = 0.22;
-const MAX_HEIGHT_FRAC = 1.05;
+const MIN_HEIGHT_FRAC = 0.11;
+const MAX_HEIGHT_FRAC = 0.52;
 
 const CURSOR_RADIUS = 240;
 const TRAIL_DECAY = 0.92;
