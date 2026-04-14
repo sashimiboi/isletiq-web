@@ -12,10 +12,12 @@ const ROW_COUNT = 18;
 
 // Per-cell bar geometry is randomized at init and stays stable
 // so the facade reads as an intentional layout, not noise.
+// Bars can now extend beyond their cell so adjacent rows overlap
+// and the grid meshes into one continuous field.
 const MIN_BAR_W = 1;
 const MAX_BAR_W = 3;
-const MIN_HEIGHT_FRAC = 0.11;
-const MAX_HEIGHT_FRAC = 0.52;
+const MIN_HEIGHT_FRAC = 0.18;
+const MAX_HEIGHT_FRAC = 1.0;
 
 const CURSOR_RADIUS = 240;
 // Eased rise and fall rates (per frame) so bars ease into and out
@@ -28,9 +30,11 @@ const HOT_ALPHA = 1;
 interface Bar {
   wPx: number;
   hFrac: number;
-  // Small horizontal jitter within the cell so columns don't look
-  // robotically aligned
+  // Jitter offsets break the strict grid so rows and columns don't
+  // read as aligned stripes. Combined with bar heights that can
+  // exceed cellH, this meshes adjacent rows together.
   xOffset: number;
+  yOffset: number;
   trail: number;
   phase: number;
 }
@@ -55,10 +59,12 @@ export default function DnaHelix() {
       const r2 = hash01(i * 17 + 3);
       const r3 = hash01(i * 31 + 7);
       const r4 = hash01(i * 53 + 11);
+      const r5 = hash01(i * 71 + 19);
       bars.push({
         wPx: MIN_BAR_W + r1 * (MAX_BAR_W - MIN_BAR_W),
         hFrac: MIN_HEIGHT_FRAC + r2 * (MAX_HEIGHT_FRAC - MIN_HEIGHT_FRAC),
         xOffset: (r3 - 0.5) * 0.4, // +/- 20% of cell width
+        yOffset: (r5 - 0.5) * 0.7, // +/- 35% of cell height
         trail: 0,
         phase: r4 * Math.PI * 2,
       });
@@ -108,7 +114,7 @@ export default function DnaHelix() {
           const bar = bars[idx];
 
           const cx = (c + 0.5 + bar.xOffset) * cellW;
-          const cy = (r + 0.5) * cellH;
+          const cy = (r + 0.5 + bar.yOffset) * cellH;
 
           // Cursor proximity with smoothstep falloff
           const dx = cx - px;
