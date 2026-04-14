@@ -1,226 +1,163 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
-// Brand palette
-const STRAND_A = "#0033a0";
-const STRAND_B = "#5cb3cc";
-const BASE_PAIR = "#0033a0";
+// Nucleotide colors drawn from the IsletIQ brand palette. Each DNA
+// base gets its own channel so the hero reads as a genomic sequence
+// rather than a uniform wash.
+const BASE_COLORS: Record<"A" | "T" | "G" | "C", [number, number, number]> = {
+  A: [0, 51, 160],    // adenine, brand blue
+  T: [92, 179, 204],  // thymine, brand cyan
+  G: [242, 166, 51],  // guanine, brand amber
+  C: [33, 196, 94],   // cytosine, brand green
+};
+const BASES = ["A", "T", "G", "C"] as const;
+type Base = (typeof BASES)[number];
 
-// Helix geometry
-const BASE_PAIRS = 28;
-const AMPLITUDE = 34;
-const VERTICAL_SPACING = 18;
+const COL_COUNT = 42;
+const ROW_COUNT = 16;
+const BASE_HEIGHT = 14;
+const CURSOR_RADIUS = 240;
+const IDLE_OPACITY = 0.08;
 
-export default function DnaHelix() {
-  const wrapperRef = useRef<HTMLDivElement>(null);
-  const [time, setTime] = useState(0);
-  const [tilt, setTilt] = useState({ x: 0, y: 0 });
-
-  useEffect(() => {
-    let raf = 0;
-    let start = performance.now();
-    const tick = (t: number) => {
-      setTime((t - start) / 1000);
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, []);
-
-  useEffect(() => {
-    const onMove = (e: PointerEvent) => {
-      const el = wrapperRef.current;
-      if (!el) return;
-      const rect = el.getBoundingClientRect();
-      const cx = rect.left + rect.width / 2;
-      const cy = rect.top + rect.height / 2;
-      const dx = (e.clientX - cx) / rect.width;
-      const dy = (e.clientY - cy) / rect.height;
-      setTilt({ x: Math.max(-1, Math.min(1, dx)), y: Math.max(-1, Math.min(1, dy)) });
-    };
-    window.addEventListener("pointermove", onMove);
-    return () => window.removeEventListener("pointermove", onMove);
-  }, []);
-
-  const height = BASE_PAIRS * VERTICAL_SPACING;
-  const width = AMPLITUDE * 2 + 40;
-  const centerX = width / 2;
-
-  // Generate points for both strands
-  const strandA: { x: number; y: number; z: number }[] = [];
-  const strandB: { x: number; y: number; z: number }[] = [];
-  for (let i = 0; i < BASE_PAIRS; i++) {
-    const y = 20 + i * VERTICAL_SPACING;
-    const phase = (i / BASE_PAIRS) * Math.PI * 4 + time * 0.8;
-    strandA.push({
-      x: centerX + Math.cos(phase) * AMPLITUDE,
-      y,
-      z: Math.sin(phase),
-    });
-    strandB.push({
-      x: centerX + Math.cos(phase + Math.PI) * AMPLITUDE,
-      y,
-      z: Math.sin(phase + Math.PI),
-    });
-  }
-
-  const pathFromPoints = (pts: { x: number; y: number }[]) => {
-    if (pts.length === 0) return "";
-    let d = `M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`;
-    for (let i = 1; i < pts.length; i++) {
-      const prev = pts[i - 1];
-      const cur = pts[i];
-      const midY = (prev.y + cur.y) / 2;
-      d += ` C ${prev.x.toFixed(2)} ${midY.toFixed(2)}, ${cur.x.toFixed(2)} ${midY.toFixed(2)}, ${cur.x.toFixed(2)} ${cur.y.toFixed(2)}`;
-    }
-    return d;
-  };
-
-  return (
-    <div
-      ref={wrapperRef}
-      className="pointer-events-none absolute inset-0 flex items-center justify-center overflow-hidden"
-      aria-hidden="true"
-      style={{
-        perspective: "1200px",
-      }}
-    >
-      <div
-        style={{
-          transform: `rotateY(${tilt.x * 14}deg) rotateX(${-tilt.y * 10}deg)`,
-          transition: "transform 200ms ease-out",
-          transformStyle: "preserve-3d",
-        }}
-      >
-        <svg
-          width={width * 3.2}
-          height={height * 0.9}
-          viewBox={`${-width * 1.1} 0 ${width * 3.2} ${height}`}
-          style={{ opacity: 0.55 }}
-        >
-          <defs>
-            <linearGradient id="strandA" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={STRAND_A} stopOpacity="0" />
-              <stop offset="15%" stopColor={STRAND_A} stopOpacity="0.85" />
-              <stop offset="85%" stopColor={STRAND_A} stopOpacity="0.85" />
-              <stop offset="100%" stopColor={STRAND_A} stopOpacity="0" />
-            </linearGradient>
-            <linearGradient id="strandB" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={STRAND_B} stopOpacity="0" />
-              <stop offset="15%" stopColor={STRAND_B} stopOpacity="0.9" />
-              <stop offset="85%" stopColor={STRAND_B} stopOpacity="0.9" />
-              <stop offset="100%" stopColor={STRAND_B} stopOpacity="0" />
-            </linearGradient>
-          </defs>
-
-          {/* Left helix */}
-          <g transform={`translate(${-width * 0.85}, 0)`}>
-            <HelixGroup
-              strandA={strandA}
-              strandB={strandB}
-              pathFromPoints={pathFromPoints}
-              time={time}
-            />
-          </g>
-
-          {/* Right helix */}
-          <g transform={`translate(${width * 1.05}, 0)`}>
-            <HelixGroup
-              strandA={strandA}
-              strandB={strandB}
-              pathFromPoints={pathFromPoints}
-              time={time}
-              phaseOffset={Math.PI}
-            />
-          </g>
-        </svg>
-      </div>
-    </div>
-  );
+interface Cell {
+  base: Base;
+  jitter: number;
 }
 
-function HelixGroup({
-  strandA,
-  strandB,
-  pathFromPoints,
-  time,
-  phaseOffset = 0,
-}: {
-  strandA: { x: number; y: number; z: number }[];
-  strandB: { x: number; y: number; z: number }[];
-  pathFromPoints: (pts: { x: number; y: number }[]) => string;
-  time: number;
-  phaseOffset?: number;
-}) {
-  // Recompute with optional phase offset so the two helices aren't
-  // identical mirror images
-  const a = strandA.map((p, i) => ({
-    ...p,
-    x: p.x + Math.cos(i * 0.3 + time + phaseOffset) * 0.5,
-  }));
-  const b = strandB.map((p, i) => ({
-    ...p,
-    x: p.x + Math.cos(i * 0.3 + time + phaseOffset + Math.PI) * 0.5,
-  }));
+export default function DnaHelix() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const pointerRef = useRef({ x: -9999, y: -9999 });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const grid: Cell[] = [];
+    for (let i = 0; i < COL_COUNT * ROW_COUNT; i++) {
+      // LCG-style hash so each cell gets stable, not-obviously-periodic noise
+      const seed = (i * 9301 + 49297) % 233280;
+      grid.push({
+        base: BASES[seed % 4],
+        jitter: seed / 233280,
+      });
+    }
+
+    let width = 0;
+    let height = 0;
+    let cellW = 0;
+    let cellH = 0;
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      width = rect.width;
+      height = rect.height;
+      const dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      cellW = width / COL_COUNT;
+      cellH = height / ROW_COUNT;
+    };
+    resize();
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(canvas);
+
+    const onPointerMove = (e: PointerEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      pointerRef.current.x = e.clientX - rect.left;
+      pointerRef.current.y = e.clientY - rect.top;
+    };
+    window.addEventListener("pointermove", onPointerMove);
+
+    let raf = 0;
+    const start = performance.now();
+
+    const draw = (t: number) => {
+      const time = (t - start) / 1000;
+      ctx.clearRect(0, 0, width, height);
+
+      const px = pointerRef.current.x;
+      const py = pointerRef.current.y;
+      const radiusSq = CURSOR_RADIUS * CURSOR_RADIUS;
+
+      ctx.lineCap = "round";
+
+      for (let r = 0; r < ROW_COUNT; r++) {
+        for (let c = 0; c < COL_COUNT; c++) {
+          const idx = r * COL_COUNT + c;
+          const cell = grid[idx];
+          const x = (c + 0.5) * cellW;
+          const y = (r + 0.5) * cellH;
+
+          const dx = x - px;
+          const dy = y - py;
+          const distSq = dx * dx + dy * dy;
+
+          let boost = 0;
+          if (distSq < radiusSq) {
+            const dist = Math.sqrt(distSq);
+            const t01 = 1 - dist / CURSOR_RADIUS;
+            boost = t01 * t01;
+          }
+
+          // Slow ambient breathing so the idle field is never dead
+          const breath =
+            0.5 + 0.5 * Math.sin(time * 1.4 + cell.jitter * 8 + c * 0.25);
+          const opacity = Math.min(
+            0.9,
+            IDLE_OPACITY + boost * 0.78 + breath * 0.035
+          );
+
+          const segHeight = BASE_HEIGHT + boost * 14;
+          const [cr, cg, cb] = BASE_COLORS[cell.base];
+
+          ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${opacity})`;
+          ctx.lineWidth = 1.3 + boost * 1.8;
+          ctx.beginPath();
+          ctx.moveTo(x, y - segHeight / 2);
+          ctx.lineTo(x, y + segHeight / 2);
+          ctx.stroke();
+
+          // Near the cursor, draw a horizontal base-pair rung to the
+          // next column. Creates the DNA ladder effect only where the
+          // user is reading the genome.
+          if (boost > 0.22 && c < COL_COUNT - 1) {
+            const partner = grid[idx + 1];
+            const [pr, pg, pb] = BASE_COLORS[partner.base];
+            const mr = Math.round((cr + pr) / 2);
+            const mg = Math.round((cg + pg) / 2);
+            const mb = Math.round((cb + pb) / 2);
+            const nx = (c + 1.5) * cellW;
+            ctx.strokeStyle = `rgba(${mr}, ${mg}, ${mb}, ${boost * 0.4})`;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(x + 2, y);
+            ctx.lineTo(nx - 2, y);
+            ctx.stroke();
+          }
+        }
+      }
+
+      raf = requestAnimationFrame(draw);
+    };
+
+    raf = requestAnimationFrame(draw);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("pointermove", onPointerMove);
+      resizeObserver.disconnect();
+    };
+  }, []);
 
   return (
-    <>
-      {/* Strand paths */}
-      <path d={pathFromPoints(a)} stroke="url(#strandA)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-      <path d={pathFromPoints(b)} stroke="url(#strandB)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
-
-      {/* Base pairs (rungs) — only draw when strand A is in front (z > 0) */}
-      {a.map((pa, i) => {
-        const pb = b[i];
-        const inFront = pa.z > 0;
-        const edgeFade = Math.min(1, Math.min(i, BASE_PAIRS - 1 - i) / 4);
-        const shimmer = 0.35 + Math.sin(time * 2 + i * 0.6) * 0.15;
-        const opacity = inFront ? shimmer * edgeFade : shimmer * 0.35 * edgeFade;
-        return (
-          <line
-            key={i}
-            x1={pa.x}
-            y1={pa.y}
-            x2={pb.x}
-            y2={pb.y}
-            stroke={BASE_PAIR}
-            strokeWidth={inFront ? 1.4 : 0.9}
-            strokeLinecap="round"
-            opacity={opacity}
-          />
-        );
-      })}
-
-      {/* Nucleotide nodes on each strand */}
-      {a.map((p, i) => {
-        const edgeFade = Math.min(1, Math.min(i, BASE_PAIRS - 1 - i) / 4);
-        const r = 1.8 + Math.max(0, p.z) * 1.6;
-        return (
-          <circle
-            key={`a-${i}`}
-            cx={p.x}
-            cy={p.y}
-            r={r}
-            fill={STRAND_A}
-            opacity={(0.45 + Math.max(0, p.z) * 0.4) * edgeFade}
-          />
-        );
-      })}
-      {b.map((p, i) => {
-        const edgeFade = Math.min(1, Math.min(i, BASE_PAIRS - 1 - i) / 4);
-        const r = 1.8 + Math.max(0, p.z) * 1.6;
-        return (
-          <circle
-            key={`b-${i}`}
-            cx={p.x}
-            cy={p.y}
-            r={r}
-            fill={STRAND_B}
-            opacity={(0.5 + Math.max(0, p.z) * 0.4) * edgeFade}
-          />
-        );
-      })}
-    </>
+    <canvas
+      ref={canvasRef}
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      aria-hidden="true"
+    />
   );
 }

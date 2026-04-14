@@ -97,7 +97,9 @@ function Hero() {
             "radial-gradient(ellipse at center, rgba(92, 179, 204, 0.15) 0%, rgba(0, 51, 160, 0.08) 35%, transparent 65%)",
         }}
       />
-      {/* Animated double-helix backdrop. Sits behind the hero content, in front of the gradient. Reacts to pointer move. */}
+      {/* Cursor-reactive genomic base-pair field. Covers the entire
+          hero; nucleotides light up within a radius of the pointer,
+          connecting into DNA rungs only where the user is reading. */}
       <div className="absolute inset-0 -z-[5] pointer-events-none hidden sm:block">
         <DnaHelix />
       </div>
