@@ -2,22 +2,23 @@
 
 import { useEffect, useRef } from "react";
 
-// Brand-blue palette. Four shades so the facade has visual variety
-// without drifting off-brand. Weights favor the darker end so the
-// idle field is subtle.
+// Brand-blue palette weighted heavily toward the deep navy so the
+// facade never fights the hero headline. Only a small sprinkle of
+// cyan gives it life.
 const PALETTE: Array<{ rgb: [number, number, number]; weight: number }> = [
-  { rgb: [0, 51, 160], weight: 0.4 },    // #0033a0 deep brand navy
-  { rgb: [30, 88, 180], weight: 0.28 },  // mid blue
-  { rgb: [92, 179, 204], weight: 0.2 },  // #5cb3cc brand cyan
-  { rgb: [180, 215, 230], weight: 0.12 },// pale ice
+  { rgb: [0, 51, 160], weight: 0.62 },   // #0033a0 deep brand navy
+  { rgb: [34, 78, 168], weight: 0.22 },  // slightly lighter navy
+  { rgb: [92, 179, 204], weight: 0.12 }, // #5cb3cc brand cyan accent
+  { rgb: [140, 190, 215], weight: 0.04 },// rare lighter accent
 ];
 
-const COL_COUNT = 58;
-const ROW_COUNT = 26;
+const COL_COUNT = 72;
+const ROW_COUNT = 22;
 const GAP_X = 2;
 const GAP_Y = 2;
 const CURSOR_RADIUS = 260;
 const TRAIL_DECAY = 0.88;
+const IDLE_ALPHA = 0.07;
 
 interface Cell {
   color: [number, number, number];
@@ -51,7 +52,7 @@ export default function DnaHelix() {
       const r2 = ((i * 2311 + 19717) % 233280) / 233280;
       grid.push({
         color: pickColor(r1),
-        tint: r2 * 0.08 - 0.04,
+        tint: r2 * 0.06 - 0.03,
         trail: 0,
       });
     }
@@ -92,6 +93,14 @@ export default function DnaHelix() {
       const py = pointerRef.current.y;
       const radiusSq = CURSOR_RADIUS * CURSOR_RADIUS;
 
+      // Center-fade mask: panels close to the horizontal and vertical
+      // center of the hero fade out so the headline and subtitle have
+      // clean breathing room. The mask is an elliptical falloff.
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const maskRadiusX = width * 0.38;
+      const maskRadiusY = height * 0.42;
+
       for (let r = 0; r < ROW_COUNT; r++) {
         for (let c = 0; c < COL_COUNT; c++) {
           const idx = r * COL_COUNT + c;
@@ -102,6 +111,7 @@ export default function DnaHelix() {
           const cx = x + cellW / 2;
           const cy = y + cellH / 2;
 
+          // Cursor spotlight with trail decay
           const dx = cx - px;
           const dy = cy - py;
           const distSq = dx * dx + dy * dy;
@@ -115,11 +125,21 @@ export default function DnaHelix() {
           cell.trail *= TRAIL_DECAY;
           const boost = Math.max(cursorBoost, cell.trail);
 
-          const baseAlpha = 0.18 + cell.tint * 0.3;
-          const alpha = Math.min(0.95, baseAlpha + boost * 0.65);
+          // Elliptical center fade: 1 at edges, 0 at dead center
+          const ndx = (cx - centerX) / maskRadiusX;
+          const ndy = (cy - centerY) / maskRadiusY;
+          const centerDistSq = ndx * ndx + ndy * ndy;
+          const edgeness = Math.min(1, centerDistSq);
+          // Smooth step for a soft vignette
+          const mask = edgeness * edgeness * (3 - 2 * edgeness);
+
+          const baseAlpha = (IDLE_ALPHA + cell.tint * 0.08) * mask;
+          const alpha = Math.min(0.9, baseAlpha + boost * 0.55);
+
+          if (alpha < 0.01) continue; // skip invisible cells
 
           const [br, bg, bb] = cell.color;
-          const light = 0.05 + cell.tint + boost * 0.5;
+          const light = cell.tint + boost * 0.45;
           const rr = Math.round(Math.min(255, br + (255 - br) * light));
           const gg = Math.round(Math.min(255, bg + (255 - bg) * light));
           const bbb = Math.round(Math.min(255, bb + (255 - bb) * light));
