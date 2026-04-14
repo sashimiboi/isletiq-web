@@ -2,34 +2,26 @@
 
 import { useEffect, useRef } from "react";
 
-// Nucleotide colors drawn from the IsletIQ brand palette with a
-// slightly brighter pass so additive blending produces a neon bloom
-// rather than a muddy wash. Think cyberpunk medical scanner.
-const BASE_COLORS: Record<"A" | "T" | "G" | "C", [number, number, number]> = {
-  A: [64, 120, 255],   // adenine, electric blue
-  T: [120, 220, 255],  // thymine, bright cyan
-  G: [255, 180, 70],   // guanine, hot amber
-  C: [80, 255, 180],   // cytosine, acid green
-};
-const BASES = ["A", "T", "G", "C"] as const;
-type Base = (typeof BASES)[number];
+// All bars are brand blue. Core = #0033a0, halo = #5cb3cc.
+const CORE_RGB = "0, 51, 160";
+const HALO_RGB = "92, 179, 204";
+const WHITE_HOT = "200, 230, 255";
 
-const COL_COUNT = 46;
-const ROW_COUNT = 18;
+const COL_COUNT = 40;
+const ROW_COUNT = 16;
 const BASE_HEIGHT = 14;
-const CURSOR_RADIUS = 260;
-const IDLE_OPACITY = 0.07;
-const TRAIL_DECAY = 0.92; // 0..1, higher = longer trail
+const CURSOR_RADIUS = 240;
+const IDLE_OPACITY = 0.1;
+const TRAIL_DECAY = 0.9;
 
 interface Cell {
-  base: Base;
   jitter: number;
-  trail: number; // 0..1 decaying intensity from recent cursor pass
+  trail: number;
 }
 
 export default function DnaHelix() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const pointerRef = useRef({ x: -9999, y: -9999, moved: false });
+  const pointerRef = useRef({ x: -9999, y: -9999 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -40,11 +32,7 @@ export default function DnaHelix() {
     const grid: Cell[] = [];
     for (let i = 0; i < COL_COUNT * ROW_COUNT; i++) {
       const seed = (i * 9301 + 49297) % 233280;
-      grid.push({
-        base: BASES[seed % 4],
-        jitter: seed / 233280,
-        trail: 0,
-      });
+      grid.push({ jitter: seed / 233280, trail: 0 });
     }
 
     let width = 0;
@@ -56,7 +44,8 @@ export default function DnaHelix() {
       const rect = canvas.getBoundingClientRect();
       width = rect.width;
       height = rect.height;
-      const dpr = window.devicePixelRatio || 1;
+      // Cap DPR at 2 so 3x retina phones and 4K displays don't melt
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
       canvas.width = Math.floor(width * dpr);
       canvas.height = Math.floor(height * dpr);
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -71,7 +60,6 @@ export default function DnaHelix() {
       const rect = canvas.getBoundingClientRect();
       pointerRef.current.x = e.clientX - rect.left;
       pointerRef.current.y = e.clientY - rect.top;
-      pointerRef.current.moved = true;
     };
     window.addEventListener("pointermove", onPointerMove);
 
@@ -80,26 +68,30 @@ export default function DnaHelix() {
 
     const draw = (t: number) => {
       const time = (t - start) / 1000;
-      // Semi-clear so trails leave a faint afterglow rather than
-      // instantly snapping off. Pure clearRect also works but the
-      // composite fade adds motion blur character.
-      ctx.globalCompositeOperation = "source-over";
       ctx.clearRect(0, 0, width, height);
 
       const px = pointerRef.current.x;
       const py = pointerRef.current.y;
       const radiusSq = CURSOR_RADIUS * CURSOR_RADIUS;
 
-      // Horizontal genome scanline that sweeps top to bottom every
-      // ~6s. Mimics a DNA sequencer reading head.
+      // Scanline sweep: a soft horizontal bar crossing the hero every
+      // 6 seconds, brightening bases it passes over
       const scanPeriod = 6;
       const scanPhase = (time % scanPeriod) / scanPeriod;
-      const scanY = scanPhase * (height + 120) - 60;
+      const scanY = scanPhase * (height + 140) - 70;
       const scanThickness = 70;
 
-      // Additive blend makes overlapping strokes bloom into neon.
-      ctx.globalCompositeOperation = "lighter";
       ctx.lineCap = "round";
+
+      // Pass A: batch every idle bar into a single Path2D and stroke
+      // once. This is the big perf win: 600 cells = 1 draw call.
+      const dimPath = new Path2D();
+      const boosted: Array<{
+        x: number;
+        y: number;
+        boost: number;
+        scanBoost: number;
+      }> = [];
 
       for (let r = 0; r < ROW_COUNT; r++) {
         for (let c = 0; c < COL_COUNT; c++) {
@@ -108,7 +100,6 @@ export default function DnaHelix() {
           const x = (c + 0.5) * cellW;
           const y = (r + 0.5) * cellH;
 
-          // Cursor proximity boost
           const dx = x - px;
           const dy = y - py;
           const distSq = dx * dx + dy * dy;
@@ -118,104 +109,96 @@ export default function DnaHelix() {
             const t01 = 1 - dist / CURSOR_RADIUS;
             cursorBoost = t01 * t01;
           }
-
-          // Persistent trail: accumulate cursor brightness, then
-          // decay each frame so cells glow for a moment after the
-          // pointer passes.
           if (cursorBoost > cell.trail) cell.trail = cursorBoost;
           cell.trail *= TRAIL_DECAY;
-          const trailBoost = cell.trail;
-          const boost = Math.max(cursorBoost, trailBoost);
+          const boost = Math.max(cursorBoost, cell.trail);
 
-          // Scanline pass: cells within scanThickness of the current
-          // scanY get a short-lived highlight.
           const scanDist = Math.abs(y - scanY);
           const scanBoost =
             scanDist < scanThickness
-              ? Math.pow(1 - scanDist / scanThickness, 3) * 0.45
+              ? Math.pow(1 - scanDist / scanThickness, 3) * 0.4
               : 0;
 
-          // Slow breathing + high-frequency shimmer. The shimmer is
-          // what sells the "cyber" vibe: a 6Hz sparkle on top of the
-          // 1.4Hz ambient wave.
-          const breath =
-            0.5 + 0.5 * Math.sin(time * 1.4 + cell.jitter * 8 + c * 0.25);
-          const sparkle =
-            0.5 + 0.5 * Math.sin(time * 6.5 + cell.jitter * 22 + r * 1.1);
-          const shimmer = breath * 0.04 + sparkle * 0.035;
-
-          const opacity = Math.min(
-            1.0,
-            IDLE_OPACITY + boost * 0.85 + scanBoost + shimmer
-          );
-
-          const segHeight = BASE_HEIGHT + boost * 16 + scanBoost * 8;
-          const [cr, cg, cb] = BASE_COLORS[cell.base];
-
-          // Primary glow stroke with neon shadow halo. shadowBlur is
-          // expensive, so we only apply it to cells that are actually
-          // lit above a threshold.
-          if (boost > 0.12 || scanBoost > 0.1) {
-            ctx.shadowColor = `rgba(${cr}, ${cg}, ${cb}, ${opacity})`;
-            ctx.shadowBlur = 8 + boost * 16;
+          if (boost > 0.04 || scanBoost > 0.05) {
+            boosted.push({ x, y, boost, scanBoost });
           } else {
-            ctx.shadowBlur = 0;
-          }
-
-          ctx.strokeStyle = `rgba(${cr}, ${cg}, ${cb}, ${opacity})`;
-          ctx.lineWidth = 1.1 + boost * 2.0 + scanBoost * 0.8;
-          ctx.beginPath();
-          ctx.moveTo(x, y - segHeight / 2);
-          ctx.lineTo(x, y + segHeight / 2);
-          ctx.stroke();
-
-          // Chromatic aberration: when a cell is strongly lit, draw
-          // two fainter offset copies in R and B so the line feels
-          // like it's ghosting on a CRT.
-          if (boost > 0.45) {
-            const chroma = boost * 1.6;
-            ctx.shadowBlur = 0;
-            ctx.strokeStyle = `rgba(255, 80, 120, ${boost * 0.35})`;
-            ctx.lineWidth = 0.9;
-            ctx.beginPath();
-            ctx.moveTo(x - chroma, y - segHeight / 2);
-            ctx.lineTo(x - chroma, y + segHeight / 2);
-            ctx.stroke();
-            ctx.strokeStyle = `rgba(80, 200, 255, ${boost * 0.35})`;
-            ctx.beginPath();
-            ctx.moveTo(x + chroma, y - segHeight / 2);
-            ctx.lineTo(x + chroma, y + segHeight / 2);
-            ctx.stroke();
-          }
-
-          // Near the cursor, connect to the next column with a DNA
-          // base-pair rung. Now glowing too.
-          if (boost > 0.22 && c < COL_COUNT - 1) {
-            const partner = grid[idx + 1];
-            const [pr, pg, pb] = BASE_COLORS[partner.base];
-            const mr = Math.round((cr + pr) / 2);
-            const mg = Math.round((cg + pg) / 2);
-            const mb = Math.round((cb + pb) / 2);
-            const nx = (c + 1.5) * cellW;
-            ctx.shadowColor = `rgba(${mr}, ${mg}, ${mb}, ${boost * 0.5})`;
-            ctx.shadowBlur = 6 + boost * 10;
-            ctx.strokeStyle = `rgba(${mr}, ${mg}, ${mb}, ${boost * 0.55})`;
-            ctx.lineWidth = 1.1;
-            ctx.beginPath();
-            ctx.moveTo(x + 2, y);
-            ctx.lineTo(nx - 2, y);
-            ctx.stroke();
+            dimPath.moveTo(x, y - BASE_HEIGHT / 2);
+            dimPath.lineTo(x, y + BASE_HEIGHT / 2);
           }
         }
       }
 
-      // Scanline highlight bar, very faint, adds a moving horizon
-      ctx.shadowBlur = 0;
-      ctx.globalCompositeOperation = "lighter";
+      // Ambient breathing on the idle field
+      const breath = 0.5 + 0.5 * Math.sin(time * 1.4);
+      ctx.strokeStyle = `rgba(${CORE_RGB}, ${IDLE_OPACITY + breath * 0.04})`;
+      ctx.lineWidth = 1.2;
+      ctx.stroke(dimPath);
+
+      // Pass B: per-cell manual bloom for the boosted set. Three
+      // stacked strokes produce neon without the cost of shadowBlur:
+      //   1. Wide faint cyan halo
+      //   2. Core thin opaque brand blue
+      //   3. White-hot centerline for the very brightest cells
+      for (const bc of boosted) {
+        const glow = Math.min(1, bc.boost + bc.scanBoost);
+        const segHeight = BASE_HEIGHT + bc.boost * 18 + bc.scanBoost * 8;
+        const halfH = segHeight / 2;
+        const topY = bc.y - halfH;
+        const botY = bc.y + halfH;
+
+        // Halo
+        ctx.strokeStyle = `rgba(${HALO_RGB}, ${glow * 0.35})`;
+        ctx.lineWidth = 5 + bc.boost * 9;
+        ctx.beginPath();
+        ctx.moveTo(bc.x, topY);
+        ctx.lineTo(bc.x, botY);
+        ctx.stroke();
+
+        // Core
+        ctx.strokeStyle = `rgba(${CORE_RGB}, ${Math.min(1, 0.3 + glow * 0.8)})`;
+        ctx.lineWidth = 1.6 + bc.boost * 1.4;
+        ctx.beginPath();
+        ctx.moveTo(bc.x, topY);
+        ctx.lineTo(bc.x, botY);
+        ctx.stroke();
+
+        // Hot core for very bright cells
+        if (bc.boost > 0.45) {
+          ctx.strokeStyle = `rgba(${WHITE_HOT}, ${bc.boost * 0.85})`;
+          ctx.lineWidth = 0.9;
+          ctx.beginPath();
+          ctx.moveTo(bc.x, topY);
+          ctx.lineTo(bc.x, botY);
+          ctx.stroke();
+        }
+      }
+
+      // Horizontal DNA rungs: only between adjacent strongly-boosted
+      // cells. Tiny additional cost since most boosted cells still
+      // fail the adjacency test.
+      ctx.strokeStyle = `rgba(${HALO_RGB}, 0.55)`;
+      ctx.lineWidth = 1.1;
+      for (let i = 0; i < boosted.length; i++) {
+        const a = boosted[i];
+        if (a.boost < 0.3) continue;
+        for (let j = i + 1; j < boosted.length; j++) {
+          const b = boosted[j];
+          if (b.boost < 0.3) continue;
+          if (Math.abs(b.y - a.y) < 1 && Math.abs(b.x - a.x - cellW) < 1) {
+            ctx.beginPath();
+            ctx.moveTo(a.x + 2, a.y);
+            ctx.lineTo(b.x - 2, b.y);
+            ctx.stroke();
+            break;
+          }
+        }
+      }
+
+      // Soft scanline bar
       const scanGrad = ctx.createLinearGradient(0, scanY - 1, 0, scanY + 1);
-      scanGrad.addColorStop(0, "rgba(120, 220, 255, 0)");
-      scanGrad.addColorStop(0.5, "rgba(120, 220, 255, 0.18)");
-      scanGrad.addColorStop(1, "rgba(120, 220, 255, 0)");
+      scanGrad.addColorStop(0, `rgba(${HALO_RGB}, 0)`);
+      scanGrad.addColorStop(0.5, `rgba(${HALO_RGB}, 0.22)`);
+      scanGrad.addColorStop(1, `rgba(${HALO_RGB}, 0)`);
       ctx.fillStyle = scanGrad;
       ctx.fillRect(0, scanY - 1, width, 2);
 
