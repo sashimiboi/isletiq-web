@@ -2,27 +2,25 @@
 
 import { useEffect, useRef } from "react";
 
-// Earth-tone palette sampled from the Cerner Innovations Campus
-// facade. Each panel represents one nucleotide base, so the hero
-// reads as a genomic sequence rendered in architectural cladding.
-// Weights control how often each appears (bronze dominates).
+// Brand-blue palette. Four shades so the facade has visual variety
+// without drifting off-brand. Weights favor the darker end so the
+// idle field is subtle.
 const PALETTE: Array<{ rgb: [number, number, number]; weight: number }> = [
-  { rgb: [176, 133, 86], weight: 0.38 },  // warm bronze
-  { rgb: [224, 210, 183], weight: 0.24 }, // cream
-  { rgb: [74, 59, 44], weight: 0.2 },     // dark bronze / charcoal
-  { rgb: [86, 110, 128], weight: 0.18 },  // blue-steel window panel
+  { rgb: [0, 51, 160], weight: 0.4 },    // #0033a0 deep brand navy
+  { rgb: [30, 88, 180], weight: 0.28 },  // mid blue
+  { rgb: [92, 179, 204], weight: 0.2 },  // #5cb3cc brand cyan
+  { rgb: [180, 215, 230], weight: 0.12 },// pale ice
 ];
 
-const COL_COUNT = 34;
-const ROW_COUNT = 18;
-const GAP_X = 4;
-const GAP_Y = 3;
-const CURSOR_RADIUS = 280;
+const COL_COUNT = 58;
+const ROW_COUNT = 26;
+const GAP_X = 2;
+const GAP_Y = 2;
+const CURSOR_RADIUS = 260;
 const TRAIL_DECAY = 0.88;
 
 interface Cell {
   color: [number, number, number];
-  // Small per-cell variation so the facade doesn't read as dead flat
   tint: number;
   trail: number;
 }
@@ -48,14 +46,12 @@ export default function DnaHelix() {
 
     const grid: Cell[] = [];
     for (let i = 0; i < COL_COUNT * ROW_COUNT; i++) {
-      // Deterministic pseudo-random so the facade is stable across
-      // renders but not obviously periodic
       const seed = (i * 9301 + 49297) % 233280;
       const r1 = seed / 233280;
       const r2 = ((i * 2311 + 19717) % 233280) / 233280;
       grid.push({
         color: pickColor(r1),
-        tint: r2 * 0.08 - 0.04, // +/- 4% lightness
+        tint: r2 * 0.08 - 0.04,
         trail: 0,
       });
     }
@@ -119,14 +115,11 @@ export default function DnaHelix() {
           cell.trail *= TRAIL_DECAY;
           const boost = Math.max(cursorBoost, cell.trail);
 
-          // Base opacity is low so the facade sits as a subtle backdrop.
-          // Cursor boost raises opacity AND lightens the panel color,
-          // like sunlight hitting a specific tile.
-          const baseAlpha = 0.22 + cell.tint * 0.3;
-          const alpha = Math.min(0.95, baseAlpha + boost * 0.6);
+          const baseAlpha = 0.18 + cell.tint * 0.3;
+          const alpha = Math.min(0.95, baseAlpha + boost * 0.65);
 
           const [br, bg, bb] = cell.color;
-          const light = 0.08 + cell.tint + boost * 0.45;
+          const light = 0.05 + cell.tint + boost * 0.5;
           const rr = Math.round(Math.min(255, br + (255 - br) * light));
           const gg = Math.round(Math.min(255, bg + (255 - bg) * light));
           const bbb = Math.round(Math.min(255, bb + (255 - bb) * light));
