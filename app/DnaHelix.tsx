@@ -25,18 +25,18 @@ const SWITCH_PROB = 0.22;
 // Occasional very dark accent bars that jump out from the grid
 const DARK_ACCENT_PROB = 0.03;
 
-const COL_COUNT = 56;
-const ROW_COUNT = 26;
+const COL_COUNT = 96;
+const ROW_COUNT = 22;
 const GAP_X = 1;
 const GAP_Y = 1;
 // Every FLOOR_EVERY rows the horizontal gap widens, simulating
 // the mullion line between floors on a curtain wall
 const FLOOR_EVERY = 6;
-const FLOOR_EXTRA_GAP = 4;
+const FLOOR_EXTRA_GAP = 3;
 
 const CURSOR_RADIUS = 260;
 const TRAIL_DECAY = 0.88;
-const IDLE_ALPHA = 0.1;
+const IDLE_ALPHA = 0.09;
 
 interface Cell {
   colorIdx: number;
@@ -140,11 +140,6 @@ export default function DnaHelix() {
       const py = pointerRef.current.y;
       const radiusSq = CURSOR_RADIUS * CURSOR_RADIUS;
 
-      const centerX = width / 2;
-      const centerY = height / 2;
-      const maskRadiusX = width * 0.4;
-      const maskRadiusY = height * 0.44;
-
       for (let r = 0; r < ROW_COUNT; r++) {
         // Floor line handling: every FLOOR_EVERY rows, shift this
         // row's Y by an extra gap so there's a visible mullion line
@@ -172,13 +167,7 @@ export default function DnaHelix() {
           cell.trail *= TRAIL_DECAY;
           const boost = Math.max(cursorBoost, cell.trail);
 
-          const ndx = (cx - centerX) / maskRadiusX;
-          const ndy = (cy - centerY) / maskRadiusY;
-          const centerDistSq = ndx * ndx + ndy * ndy;
-          const edgeness = Math.min(1, centerDistSq);
-          const mask = edgeness * edgeness * (3 - 2 * edgeness);
-
-          const baseAlpha = (IDLE_ALPHA + cell.tint * 0.08) * mask;
+          const baseAlpha = IDLE_ALPHA + cell.tint * 0.08;
           const alpha = Math.min(0.95, baseAlpha + boost * 0.65);
 
           if (alpha < 0.01) continue;
