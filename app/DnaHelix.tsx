@@ -18,7 +18,10 @@ const MIN_HEIGHT_FRAC = 0.11;
 const MAX_HEIGHT_FRAC = 0.52;
 
 const CURSOR_RADIUS = 240;
-const TRAIL_DECAY = 0.92;
+// Eased rise and fall rates (per frame) so bars ease into and out
+// of the hover state gracefully rather than snapping
+const RISE_LERP = 0.16;
+const FALL_LERP = 0.05;
 const IDLE_ALPHA = 0.11;
 const HOT_ALPHA = 1;
 
@@ -107,19 +110,26 @@ export default function DnaHelix() {
           const cx = (c + 0.5 + bar.xOffset) * cellW;
           const cy = (r + 0.5) * cellH;
 
-          // Cursor proximity with trail
+          // Cursor proximity with smoothstep falloff
           const dx = cx - px;
           const dy = cy - py;
           const distSq = dx * dx + dy * dy;
-          let cursorBoost = 0;
+          let target = 0;
           if (distSq < radiusSq) {
             const dist = Math.sqrt(distSq);
             const t01 = 1 - dist / CURSOR_RADIUS;
-            cursorBoost = t01 * t01;
+            // Smoothstep gives a softer ring than quadratic
+            target = t01 * t01 * (3 - 2 * t01);
           }
-          if (cursorBoost > bar.trail) bar.trail = cursorBoost;
-          bar.trail *= TRAIL_DECAY;
-          const boost = Math.max(cursorBoost, bar.trail);
+          // Ease toward target at different rates for rise and fall,
+          // so bars smoothly ramp up as the cursor enters their
+          // radius and gracefully fade out after it leaves
+          if (target > bar.trail) {
+            bar.trail += (target - bar.trail) * RISE_LERP;
+          } else {
+            bar.trail += (target - bar.trail) * FALL_LERP;
+          }
+          const boost = bar.trail;
 
           // Ambient breath so idle bars faintly pulse
           const breath = Math.sin(time * 0.9 + bar.phase) * 0.5 + 0.5;
