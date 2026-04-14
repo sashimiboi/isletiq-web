@@ -135,12 +135,12 @@ export default function DnaHelix() {
           } else {
             bar.trail += (target - bar.trail) * FALL_LERP;
           }
-          // Hover pulse: hovered bars oscillate between 82 percent and
-          // 100 percent of their peak brightness on a ~2.8 Hz cycle
-          // with per-bar phase offset so nearby bars pulse slightly
-          // out of sync, giving a gentle waving breath.
-          const pulse = Math.sin(time * 2.8 + bar.phase * 0.6) * 0.5 + 0.5;
-          const boost = bar.trail * (0.82 + 0.18 * pulse);
+          // Hover pulse: hovered bars oscillate between 55 percent
+          // and 100 percent of their peak on a ~0.67 Hz cycle. Per-bar
+          // phase offset keeps nearby bars slightly out of sync so
+          // the cluster waves instead of strobing.
+          const pulse = Math.sin(time * 4.2 + bar.phase * 0.7) * 0.5 + 0.5;
+          const boost = bar.trail * (0.55 + 0.45 * pulse);
 
           // Ambient breath so idle bars faintly pulse
           const breath = Math.sin(time * 0.9 + bar.phase) * 0.5 + 0.5;
