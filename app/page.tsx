@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import PhoneMockup from "./PhoneMockup";
+import DnaHelix from "./DnaHelix";
 import {
   IconChartLine,
   IconChartAreaLine,
@@ -96,6 +97,10 @@ function Hero() {
             "radial-gradient(ellipse at center, rgba(92, 179, 204, 0.15) 0%, rgba(0, 51, 160, 0.08) 35%, transparent 65%)",
         }}
       />
+      {/* Animated double-helix backdrop. Sits behind the hero content, in front of the gradient. Reacts to pointer move. */}
+      <div className="absolute inset-0 -z-[5] pointer-events-none hidden sm:block">
+        <DnaHelix />
+      </div>
       <div className="relative max-w-5xl mx-auto px-6 text-center">
         <div className="float-in inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-white border border-[#0033a0]/10 shadow-sm text-xs text-[#666b78] mb-8">
           <span className="w-1.5 h-1.5 rounded-xl bg-[#21c45e] gentle-pulse" />
