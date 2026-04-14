@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import PhoneMockup from "./PhoneMockup";
 import DnaHelix from "./DnaHelix";
+import ChatMockup from "./ChatMockup";
 import {
   IconChartLine,
   IconChartAreaLine,
@@ -20,7 +21,6 @@ import {
   IconCamera,
   IconPill,
   IconBrain,
-  IconArrowRight,
   type Icon,
 } from "@tabler/icons-react";
 
@@ -439,127 +439,6 @@ function Capability({
         <p className="text-sm text-[#666b78] leading-relaxed">{body}</p>
       </div>
     </div>
-  );
-}
-
-function ChatMockup() {
-  return (
-    <div className="card border border-black/[0.04] overflow-hidden shadow-xl shadow-[#0033a0]/[0.08]">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-4 border-b border-black/[0.05] bg-gradient-to-b from-white to-[#fafbfd]">
-        <div className="w-9 h-9 rounded-xl bg-[#0033a0]/[0.08] flex items-center justify-center">
-          <IconBrain size={20} stroke={1.75} color="#0033a0" />
-        </div>
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-[#14171f]">Islet-A1</div>
-          <div className="text-[10px] text-[#94989e]">
-            General-purpose CGM & pump assistant
-          </div>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] text-[#21c45e] font-medium">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#21c45e] gentle-pulse" />
-          Online
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div className="px-5 py-5 space-y-4 bg-[#fafbfd]">
-        {/* User message */}
-        <div className="flex justify-end">
-          <div className="max-w-[80%] rounded-2xl rounded-tr-md bg-[#0033a0] text-white px-4 py-2.5 text-sm leading-relaxed shadow-sm">
-            Why did I spike after lunch yesterday?
-          </div>
-        </div>
-
-        {/* Assistant: thinking + tool call + answer */}
-        <div className="space-y-2">
-          {/* Thinking step */}
-          <div className="flex items-start gap-2 px-1">
-            <div className="w-1 h-1 rounded-full bg-[#0033a0]/40 mt-2" />
-            <div className="text-[11px] text-[#94989e] italic">
-              Looking at your CGM data from yesterday afternoon...
-            </div>
-          </div>
-          {/* Tool call pill */}
-          <div className="flex items-center gap-2 px-3 py-2 bg-white border border-[#0033a0]/15 rounded-lg max-w-fit">
-            <div className="w-5 h-5 rounded bg-[#0033a0]/[0.08] flex items-center justify-center">
-              <IconChartLine size={12} stroke={2} color="#0033a0" />
-            </div>
-            <span className="text-[11px] font-mono text-[#0033a0]">
-              analyze_meal_impact
-            </span>
-            <span className="text-[10px] text-[#94989e]">
-              meal: lunch · window: 3h
-            </span>
-          </div>
-          {/* Tool result pill */}
-          <div className="flex items-center gap-2 px-3 py-1.5 max-w-fit">
-            <IconArrowRight size={12} stroke={2} color="#21c45e" />
-            <span className="text-[10px] text-[#21c45e] font-medium">
-              Pattern found across last 7 lunches
-            </span>
-          </div>
-          {/* Final answer bubble */}
-          <div className="flex justify-start">
-            <div className="max-w-[88%] rounded-2xl rounded-tl-md bg-white border border-black/[0.05] px-4 py-3 text-sm text-[#14171f] leading-relaxed shadow-sm">
-              <div className="font-semibold mb-1.5">
-                Pasta caused a 75 mg/dL spike.
-              </div>
-              <div className="text-[#666b78] text-[13px]">
-                You went from 108 → 183 mg/dL in 45 min, peaking around 1:15
-                PM. Your insulin-to-carb ratio for lunch (1:12) handled the
-                fast carbs well, but the bolus timing was the issue, you
-                bolused at the first bite instead of pre-bolusing.
-              </div>
-              <div className="mt-2.5 pt-2.5 border-t border-black/[0.05] text-[12px] text-[#0033a0] font-medium">
-                Try pre-bolusing 15 min earlier next time?
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick action chips */}
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          <Chip>Show me other meals like this</Chip>
-          <Chip>Set a pre-bolus reminder</Chip>
-          <Chip>Generate report for endo</Chip>
-        </div>
-      </div>
-
-      {/* Input bar */}
-      <div className="flex items-center gap-2 px-4 py-3 border-t border-black/[0.05] bg-white">
-        <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-[#f2f3f6] rounded-xl">
-          <span className="text-xs text-[#94989e]">
-            Ask anything about your data...
-          </span>
-        </div>
-        <button
-          type="button"
-          className="w-9 h-9 rounded-xl bg-[#0033a0]/[0.08] flex items-center justify-center hover:bg-[#0033a0]/[0.12] transition"
-          aria-label="Voice mode"
-        >
-          <IconMicrophone size={16} stroke={1.75} color="#0033a0" />
-        </button>
-        <button
-          type="button"
-          className="w-9 h-9 rounded-xl bg-[#0033a0] flex items-center justify-center hover:bg-[#002d8f] transition"
-          aria-label="Send"
-        >
-          <IconArrowRight size={16} stroke={2.25} color="white" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      className="text-[10px] px-2.5 py-1 rounded-full bg-white border border-[#0033a0]/15 text-[#0033a0] font-medium hover:bg-[#0033a0]/[0.04] transition"
-    >
-      {children}
-    </button>
   );
 }
 
