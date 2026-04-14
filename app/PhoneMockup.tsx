@@ -23,6 +23,9 @@ import {
   IconToolsKitchen2,
   IconRun,
   IconPill,
+  IconCamera,
+  IconPhoto,
+  IconMicrophone,
   type Icon,
 } from "@tabler/icons-react";
 
@@ -503,11 +506,20 @@ function AgentTab() {
       </div>
 
       {/* Input bar */}
-      <div className="flex items-center gap-1.5 mt-1.5">
-        <div className="flex-1 px-2.5 py-1.5 bg-white border border-black/[0.05] rounded-lg text-[8px] text-[#94989e]">
+      <div className="flex items-center gap-1 mt-1.5">
+        <div className="w-5 h-5 rounded-md bg-[#0033a0]/[0.08] flex items-center justify-center shrink-0">
+          <IconCamera size={10} stroke={2} color="#0033a0" />
+        </div>
+        <div className="w-5 h-5 rounded-md bg-[#0033a0]/[0.08] flex items-center justify-center shrink-0">
+          <IconPhoto size={10} stroke={2} color="#0033a0" />
+        </div>
+        <div className="flex-1 px-2 py-1.5 bg-white border border-black/[0.05] rounded-lg text-[8px] text-[#94989e] truncate">
           Ask anything...
         </div>
-        <div className="w-6 h-6 rounded-md bg-[#0033a0] flex items-center justify-center">
+        <div className="w-5 h-5 rounded-md bg-[#0033a0]/[0.08] flex items-center justify-center shrink-0">
+          <IconMicrophone size={10} stroke={2} color="#0033a0" />
+        </div>
+        <div className="w-6 h-6 rounded-md bg-[#0033a0] flex items-center justify-center shrink-0">
           <IconArrowRight size={11} stroke={2.5} color="white" />
         </div>
       </div>
