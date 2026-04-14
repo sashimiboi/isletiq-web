@@ -1,26 +1,94 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Match IsletIQ Theme.swift exactly */
+  --background: #f6f7fa;       /* Theme.bg,slightly cool gray */
+  --card: #ffffff;             /* Theme.cardBg */
+  --muted: #f2f3f6;            /* Theme.muted */
+  --foreground: #14171f;       /* Theme.textPrimary */
+  --text-secondary: #666b78;   /* Theme.textSecondary */
+  --text-tertiary: #94989e;    /* Theme.textTertiary */
+  --border: rgba(0, 0, 0, 0.08); /* Theme.border */
+
+  --primary: #0033a0;          /* Theme.primary deep blue */
+  --primary-dark: #002d8f;     /* Theme.primaryDark */
+  --teal: #5cb3cc;             /* Theme.accent */
+
+  --normal: #21c45e;           /* Theme.normal,green */
+  --elevated: #f2a633;         /* Theme.elevated,orange */
+  --high: #d4173d;             /* Theme.high,red */
+  --low: #eb4d4d;              /* Theme.low */
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-card: var(--card);
+  --color-muted: var(--muted);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-teal: var(--teal);
+  --color-normal: var(--normal);
+  --color-elevated: var(--elevated);
+  --color-high: var(--high);
+  --color-low: var(--low);
+  --font-sans: var(--font-sans);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "ss01", "ss02";
+}
+
+/* Card style,mirrors Theme.swift CardStyle modifier */
+.card {
+  background: var(--card);
+  border-radius: 14px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.card-hover {
+  transition: box-shadow 200ms ease, transform 200ms ease;
+}
+.card-hover:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+@keyframes float-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.float-in {
+  animation: float-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes gentle-pulse {
+  0%, 100% {
+    opacity: 0.9;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.gentle-pulse {
+  animation: gentle-pulse 3s ease-in-out infinite;
 }
