@@ -2,37 +2,50 @@
 
 import { useEffect, useRef } from "react";
 
-// Brand-blue palette weighted heavily toward the deep navy so the
-// facade never fights the hero headline. Only a small sprinkle of
-// cyan gives it life.
-const PALETTE: Array<{ rgb: [number, number, number]; weight: number }> = [
-  { rgb: [0, 51, 160], weight: 0.62 },   // #0033a0 deep brand navy
-  { rgb: [34, 78, 168], weight: 0.22 },  // slightly lighter navy
-  { rgb: [92, 179, 204], weight: 0.12 }, // #5cb3cc brand cyan accent
-  { rgb: [140, 190, 215], weight: 0.04 },// rare lighter accent
+// Four brand-blue tones with enough contrast between them that
+// runs of each one read as distinct vertical stripes, like the
+// base-sequence facade at Cerner's Innovations Campus.
+const PALETTE: Array<[number, number, number]> = [
+  [0, 24, 76],     // very deep shadow navy
+  [0, 51, 160],    // #0033a0 brand navy (dominant)
+  [92, 179, 204],  // #5cb3cc brand cyan
+  [198, 224, 236], // pale ice highlight
 ];
 
-const COL_COUNT = 72;
-const ROW_COUNT = 22;
-const GAP_X = 2;
-const GAP_Y = 2;
+// Per-column dominant weights (index into PALETTE). Heavily favor
+// the dark tones so the facade stays legible behind the headline.
+const COLUMN_DOMINANT_WEIGHTS = [0.42, 0.38, 0.15, 0.05];
+
+// Probability that a cell diverges from its column's dominant color
+// (a "base switch" in the sequence). Keeps vertical runs mostly
+// intact but adds occasional visual rhythm.
+const SWITCH_PROB = 0.18;
+
+const COL_COUNT = 44;
+const ROW_COUNT = 30;
+const GAP_X = 4;
+const GAP_Y = 1;
 const CURSOR_RADIUS = 260;
 const TRAIL_DECAY = 0.88;
-const IDLE_ALPHA = 0.07;
+const IDLE_ALPHA = 0.08;
 
 interface Cell {
-  color: [number, number, number];
+  colorIdx: number;
   tint: number;
   trail: number;
 }
 
-function pickColor(random: number): [number, number, number] {
+function hash01(i: number): number {
+  return ((i * 9301 + 49297) % 233280) / 233280;
+}
+
+function pickColumnDominant(random: number): number {
   let acc = 0;
-  for (const entry of PALETTE) {
-    acc += entry.weight;
-    if (random < acc) return entry.rgb;
+  for (let i = 0; i < COLUMN_DOMINANT_WEIGHTS.length; i++) {
+    acc += COLUMN_DOMINANT_WEIGHTS[i];
+    if (random < acc) return i;
   }
-  return PALETTE[0].rgb;
+  return 0;
 }
 
 export default function DnaHelix() {
@@ -45,16 +58,37 @@ export default function DnaHelix() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // Step 1: assign every column its dominant color
+    const columnDominant: number[] = [];
+    for (let c = 0; c < COL_COUNT; c++) {
+      columnDominant.push(pickColumnDominant(hash01(c * 131 + 7)));
+    }
+
+    // Step 2: build grid, biasing each cell toward its column dominant
     const grid: Cell[] = [];
-    for (let i = 0; i < COL_COUNT * ROW_COUNT; i++) {
-      const seed = (i * 9301 + 49297) % 233280;
-      const r1 = seed / 233280;
-      const r2 = ((i * 2311 + 19717) % 233280) / 233280;
-      grid.push({
-        color: pickColor(r1),
-        tint: r2 * 0.06 - 0.03,
-        trail: 0,
-      });
+    for (let r = 0; r < ROW_COUNT; r++) {
+      for (let c = 0; c < COL_COUNT; c++) {
+        const seed1 = hash01(r * COL_COUNT + c);
+        const seed2 = hash01((r * 1021 + c * 31) * 17);
+
+        let colorIdx: number;
+        if (seed1 > SWITCH_PROB) {
+          // Follow the column's dominant base
+          colorIdx = columnDominant[c];
+        } else {
+          // Base switch: pick a different tone, favoring adjacent
+          // lightness so the switch doesn't look random
+          const dom = columnDominant[c];
+          const options = [0, 1, 2, 3].filter((i) => i !== dom);
+          colorIdx = options[Math.floor(seed2 * options.length)];
+        }
+
+        grid.push({
+          colorIdx,
+          tint: seed2 * 0.06 - 0.03,
+          trail: 0,
+        });
+      }
     }
 
     let width = 0;
@@ -93,9 +127,6 @@ export default function DnaHelix() {
       const py = pointerRef.current.y;
       const radiusSq = CURSOR_RADIUS * CURSOR_RADIUS;
 
-      // Center-fade mask: panels close to the horizontal and vertical
-      // center of the hero fade out so the headline and subtitle have
-      // clean breathing room. The mask is an elliptical falloff.
       const centerX = width / 2;
       const centerY = height / 2;
       const maskRadiusX = width * 0.38;
@@ -111,7 +142,6 @@ export default function DnaHelix() {
           const cx = x + cellW / 2;
           const cy = y + cellH / 2;
 
-          // Cursor spotlight with trail decay
           const dx = cx - px;
           const dy = cy - py;
           const distSq = dx * dx + dy * dy;
@@ -125,21 +155,19 @@ export default function DnaHelix() {
           cell.trail *= TRAIL_DECAY;
           const boost = Math.max(cursorBoost, cell.trail);
 
-          // Elliptical center fade: 1 at edges, 0 at dead center
           const ndx = (cx - centerX) / maskRadiusX;
           const ndy = (cy - centerY) / maskRadiusY;
           const centerDistSq = ndx * ndx + ndy * ndy;
           const edgeness = Math.min(1, centerDistSq);
-          // Smooth step for a soft vignette
           const mask = edgeness * edgeness * (3 - 2 * edgeness);
 
           const baseAlpha = (IDLE_ALPHA + cell.tint * 0.08) * mask;
-          const alpha = Math.min(0.9, baseAlpha + boost * 0.55);
+          const alpha = Math.min(0.92, baseAlpha + boost * 0.6);
 
-          if (alpha < 0.01) continue; // skip invisible cells
+          if (alpha < 0.01) continue;
 
-          const [br, bg, bb] = cell.color;
-          const light = cell.tint + boost * 0.45;
+          const [br, bg, bb] = PALETTE[cell.colorIdx];
+          const light = cell.tint + boost * 0.4;
           const rr = Math.round(Math.min(255, br + (255 - br) * light));
           const gg = Math.round(Math.min(255, bg + (255 - bg) * light));
           const bbb = Math.round(Math.min(255, bb + (255 - bb) * light));
