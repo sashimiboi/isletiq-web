@@ -2,20 +2,20 @@
 
 import { useEffect, useRef } from "react";
 
-// Cool blue-gray palette sampled from the glass curtain-wall
-// reference. High value range (near-black shadow to near-white
-// highlight) so vertical runs read as distinct stripes.
+// Brand-blue palette built around #0033a0 as the base. Shadow
+// through highlight so vertical runs still read as distinct
+// stripes like the glass curtain-wall reference.
 const PALETTE: Array<[number, number, number]> = [
-  [18, 38, 55],    // near-black navy (rare accent)
-  [55, 90, 115],   // dark teal-blue
-  [120, 165, 185], // mid blue-gray (dominant)
-  [180, 212, 225], // light cyan
-  [228, 238, 240], // pale near-white highlight
+  [0, 18, 65],     // shadow navy (rare accent)
+  [0, 35, 115],    // darker brand
+  [0, 51, 160],    // #0033a0 brand navy (dominant)
+  [92, 179, 204],  // #5cb3cc brand cyan
+  [200, 225, 240], // pale ice highlight
 ];
 
-// Per-column dominant distribution. Favors the mid tones so the
-// facade reads as glass, not navy.
-const COLUMN_DOMINANT_WEIGHTS = [0.08, 0.28, 0.36, 0.2, 0.08];
+// Per-column dominant distribution. Weighted so brand navy
+// dominates the facade.
+const COLUMN_DOMINANT_WEIGHTS = [0.06, 0.2, 0.42, 0.22, 0.1];
 
 // Small chance that a given cell diverges from its column's
 // dominant color, producing the occasional "base switch" visible
