@@ -2,32 +2,41 @@
 
 import { useEffect, useRef } from "react";
 
-// Four brand-blue tones with enough contrast between them that
-// runs of each one read as distinct vertical stripes, like the
-// base-sequence facade at Cerner's Innovations Campus.
+// Cool blue-gray palette sampled from the glass curtain-wall
+// reference. High value range (near-black shadow to near-white
+// highlight) so vertical runs read as distinct stripes.
 const PALETTE: Array<[number, number, number]> = [
-  [0, 24, 76],     // very deep shadow navy
-  [0, 51, 160],    // #0033a0 brand navy (dominant)
-  [92, 179, 204],  // #5cb3cc brand cyan
-  [198, 224, 236], // pale ice highlight
+  [18, 38, 55],    // near-black navy (rare accent)
+  [55, 90, 115],   // dark teal-blue
+  [120, 165, 185], // mid blue-gray (dominant)
+  [180, 212, 225], // light cyan
+  [228, 238, 240], // pale near-white highlight
 ];
 
-// Per-column dominant weights (index into PALETTE). Heavily favor
-// the dark tones so the facade stays legible behind the headline.
-const COLUMN_DOMINANT_WEIGHTS = [0.42, 0.38, 0.15, 0.05];
+// Per-column dominant distribution. Favors the mid tones so the
+// facade reads as glass, not navy.
+const COLUMN_DOMINANT_WEIGHTS = [0.08, 0.28, 0.36, 0.2, 0.08];
 
-// Probability that a cell diverges from its column's dominant color
-// (a "base switch" in the sequence). Keeps vertical runs mostly
-// intact but adds occasional visual rhythm.
-const SWITCH_PROB = 0.18;
+// Small chance that a given cell diverges from its column's
+// dominant color, producing the occasional "base switch" visible
+// in a real sequence facade.
+const SWITCH_PROB = 0.22;
 
-const COL_COUNT = 44;
-const ROW_COUNT = 30;
-const GAP_X = 4;
+// Occasional very dark accent bars that jump out from the grid
+const DARK_ACCENT_PROB = 0.03;
+
+const COL_COUNT = 56;
+const ROW_COUNT = 26;
+const GAP_X = 1;
 const GAP_Y = 1;
+// Every FLOOR_EVERY rows the horizontal gap widens, simulating
+// the mullion line between floors on a curtain wall
+const FLOOR_EVERY = 6;
+const FLOOR_EXTRA_GAP = 4;
+
 const CURSOR_RADIUS = 260;
 const TRAIL_DECAY = 0.88;
-const IDLE_ALPHA = 0.08;
+const IDLE_ALPHA = 0.1;
 
 interface Cell {
   colorIdx: number;
@@ -39,13 +48,13 @@ function hash01(i: number): number {
   return ((i * 9301 + 49297) % 233280) / 233280;
 }
 
-function pickColumnDominant(random: number): number {
+function pickWeighted(weights: number[], random: number): number {
   let acc = 0;
-  for (let i = 0; i < COLUMN_DOMINANT_WEIGHTS.length; i++) {
-    acc += COLUMN_DOMINANT_WEIGHTS[i];
+  for (let i = 0; i < weights.length; i++) {
+    acc += weights[i];
     if (random < acc) return i;
   }
-  return 0;
+  return weights.length - 1;
 }
 
 export default function DnaHelix() {
@@ -58,29 +67,33 @@ export default function DnaHelix() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // Step 1: assign every column its dominant color
+    // Column dominant colors
     const columnDominant: number[] = [];
     for (let c = 0; c < COL_COUNT; c++) {
-      columnDominant.push(pickColumnDominant(hash01(c * 131 + 7)));
+      columnDominant.push(
+        pickWeighted(COLUMN_DOMINANT_WEIGHTS, hash01(c * 131 + 7))
+      );
     }
 
-    // Step 2: build grid, biasing each cell toward its column dominant
+    // Build grid with vertical runs
     const grid: Cell[] = [];
     for (let r = 0; r < ROW_COUNT; r++) {
       for (let c = 0; c < COL_COUNT; c++) {
         const seed1 = hash01(r * COL_COUNT + c);
         const seed2 = hash01((r * 1021 + c * 31) * 17);
+        const seed3 = hash01(r * 877 + c * 41 + 13);
 
         let colorIdx: number;
-        if (seed1 > SWITCH_PROB) {
-          // Follow the column's dominant base
+        if (seed3 < DARK_ACCENT_PROB) {
+          // Rare very dark accent
+          colorIdx = 0;
+        } else if (seed1 > SWITCH_PROB) {
           colorIdx = columnDominant[c];
         } else {
-          // Base switch: pick a different tone, favoring adjacent
-          // lightness so the switch doesn't look random
+          // Pick a neighboring tone (prefer adjacent lightness)
           const dom = columnDominant[c];
-          const options = [0, 1, 2, 3].filter((i) => i !== dom);
-          colorIdx = options[Math.floor(seed2 * options.length)];
+          const shift = seed2 < 0.5 ? -1 : 1;
+          colorIdx = Math.max(0, Math.min(PALETTE.length - 1, dom + shift));
         }
 
         grid.push({
@@ -129,16 +142,20 @@ export default function DnaHelix() {
 
       const centerX = width / 2;
       const centerY = height / 2;
-      const maskRadiusX = width * 0.38;
-      const maskRadiusY = height * 0.42;
+      const maskRadiusX = width * 0.4;
+      const maskRadiusY = height * 0.44;
 
       for (let r = 0; r < ROW_COUNT; r++) {
+        // Floor line handling: every FLOOR_EVERY rows, shift this
+        // row's Y by an extra gap so there's a visible mullion line
+        const floorShift = Math.floor(r / FLOOR_EVERY) * FLOOR_EXTRA_GAP;
+
         for (let c = 0; c < COL_COUNT; c++) {
           const idx = r * COL_COUNT + c;
           const cell = grid[idx];
 
           const x = c * cellW;
-          const y = r * cellH;
+          const y = r * cellH + floorShift;
           const cx = x + cellW / 2;
           const cy = y + cellH / 2;
 
@@ -162,7 +179,7 @@ export default function DnaHelix() {
           const mask = edgeness * edgeness * (3 - 2 * edgeness);
 
           const baseAlpha = (IDLE_ALPHA + cell.tint * 0.08) * mask;
-          const alpha = Math.min(0.92, baseAlpha + boost * 0.6);
+          const alpha = Math.min(0.95, baseAlpha + boost * 0.65);
 
           if (alpha < 0.01) continue;
 
