@@ -35,13 +35,14 @@ const FLOOR_EVERY = 6;
 const FLOOR_EXTRA_GAP = 3;
 
 const CURSOR_RADIUS = 260;
-const TRAIL_DECAY = 0.88;
-const IDLE_ALPHA = 0.09;
+const TRAIL_DECAY = 0.92; // slower decay so the hover trail lingers
+const IDLE_ALPHA = 0.055;
 
 interface Cell {
   colorIdx: number;
   tint: number;
   trail: number;
+  phase: number; // per-cell phase offset for ambient breathing
 }
 
 function hash01(i: number): number {
@@ -100,6 +101,7 @@ export default function DnaHelix() {
           colorIdx,
           tint: seed2 * 0.06 - 0.03,
           trail: 0,
+          phase: hash01(r * 47 + c * 23) * Math.PI * 2,
         });
       }
     }
@@ -132,8 +134,10 @@ export default function DnaHelix() {
     window.addEventListener("pointermove", onPointerMove);
 
     let raf = 0;
+    const start = performance.now();
 
-    const draw = () => {
+    const draw = (t: number) => {
+      const time = (t - start) / 1000;
       ctx.clearRect(0, 0, width, height);
 
       const px = pointerRef.current.x;
@@ -154,6 +158,7 @@ export default function DnaHelix() {
           const cx = x + cellW / 2;
           const cy = y + cellH / 2;
 
+          // Cursor proximity with trail decay
           const dx = cx - px;
           const dy = cy - py;
           const distSq = dx * dx + dy * dy;
@@ -167,24 +172,34 @@ export default function DnaHelix() {
           cell.trail *= TRAIL_DECAY;
           const boost = Math.max(cursorBoost, cell.trail);
 
-          const baseAlpha = IDLE_ALPHA + cell.tint * 0.08;
-          const alpha = Math.min(0.95, baseAlpha + boost * 0.65);
+          // Ambient breathing: very slow per-cell sine so the idle
+          // field subtly undulates. Amplitude is tiny so it never
+          // dominates but is enough to feel alive.
+          const breath = Math.sin(time * 0.9 + cell.phase) * 0.5 + 0.5;
+          const breathAlpha = breath * 0.025;
+
+          const baseAlpha = IDLE_ALPHA + cell.tint * 0.08 + breathAlpha;
+          // Hover pop: much stronger alpha boost than before
+          const alpha = Math.min(1, baseAlpha + boost * 0.9);
 
           if (alpha < 0.01) continue;
 
           const [br, bg, bb] = PALETTE[cell.colorIdx];
-          const light = cell.tint + boost * 0.4;
+          // Strong lightness shift on hover so cells truly pop
+          const light = cell.tint + boost * 0.55;
           const rr = Math.round(Math.min(255, br + (255 - br) * light));
           const gg = Math.round(Math.min(255, bg + (255 - bg) * light));
           const bbb = Math.round(Math.min(255, bb + (255 - bb) * light));
 
+          // Scale hovered cells up so they lift off the grid
+          const scale = 1 + boost * 0.35;
+          const drawW = (cellW - GAP_X) * scale;
+          const drawH = (cellH - GAP_Y) * scale;
+          const drawX = cx - drawW / 2;
+          const drawY = cy - drawH / 2;
+
           ctx.fillStyle = `rgba(${rr}, ${gg}, ${bbb}, ${alpha})`;
-          ctx.fillRect(
-            x + GAP_X / 2,
-            y + GAP_Y / 2,
-            cellW - GAP_X,
-            cellH - GAP_Y
-          );
+          ctx.fillRect(drawX, drawY, drawW, drawH);
         }
       }
 
