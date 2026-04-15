@@ -361,14 +361,8 @@ function AgenticSync() {
             <Capability
               Icon={IconBrain}
               tint="#0033a0"
-              title="Seven specialist agents"
-              body="Islet-A1 is the orchestrator. CGM, Pump, Nutrition, Supplies, Medications, and Glycemic Impact agents handle their domains. They hand off to each other when a question crosses boundaries."
-            />
-            <Capability
-              Icon={IconSparkles}
-              tint="#5cb3cc"
-              title="Tools, not just answers"
-              body="The agent calls real tools like analyze_glucose_trends, calculate_bolus, log_meal_request, and search_clinical_trials. You see what it called and what it returned, every time."
+              title="Seven agents. Real tools. Full transparency."
+              body="Islet-A1 orchestrates six specialists, CGM, Pump, Nutrition, Supplies, Medications, and Glycemic Impact, handing off when a question crosses boundaries. Each one calls real tools like analyze_glucose_trends, calculate_bolus, log_meal_request, and search_clinical_trials, and you see what was called and what it returned, every time."
             />
             <Capability
               Icon={IconMicrophone}
