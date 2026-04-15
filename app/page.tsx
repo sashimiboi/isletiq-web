@@ -20,7 +20,6 @@ import {
   IconSparkles,
   IconMicrophone,
   IconCamera,
-  IconPill,
   IconBrain,
   type Icon,
 } from "@tabler/icons-react";
@@ -373,20 +372,8 @@ function AgenticSync() {
             <Capability
               Icon={IconCamera}
               tint="#f2a633"
-              title="Snap your meal"
-              body="Point your camera at a plate. The agent estimates carbs, protein, fat, and offers to log it to Apple Health."
-            />
-            <Capability
-              Icon={IconPill}
-              tint="#21c45e"
-              title="Snap your meds"
-              body="Point your camera at a pill bottle or prescription label. The agent reads the name, dose, and frequency, and adds it to your medication schedule."
-            />
-            <Capability
-              Icon={IconPackage}
-              tint="#5cb3cc"
-              title="Snap your supplies"
-              body="Point your camera at any diabetes supply box. The agent recognizes the product, adds it to your inventory, and tracks usage so you never run out."
+              title="Snap meals, meds, and supplies"
+              body="Point your camera at a plate, a pill bottle, or a diabetes supply box. The agent estimates carbs, protein, and fat for meals, reads dose and frequency off prescription labels, and recognizes supply boxes, then logs each one to the right place: Apple Health, your medication schedule, or your inventory."
             />
             <Capability
               Icon={IconChartAreaLine}
