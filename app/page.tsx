@@ -3,6 +3,7 @@ import Link from "next/link";
 import PhoneMockup from "./PhoneMockup";
 import DnaHelix from "./DnaHelix";
 import ChatMockup from "./ChatMockup";
+import WaitlistForm from "./WaitlistForm";
 import {
   IconChartLine,
   IconChartAreaLine,
@@ -535,25 +536,7 @@ function CTA() {
           We&apos;re finalizing the App Store launch. Join the waitlist for
           early access and TestFlight invites.
         </p>
-        <form
-          className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto"
-          action="https://formsubmit.co/hello@isletiq.com"
-          method="POST"
-        >
-          <input
-            type="email"
-            name="email"
-            required
-            placeholder="you@example.com"
-            className="flex-1 px-5 py-3.5 rounded-xl bg-white border border-black/[0.08] text-[#14171f] placeholder:text-[#94989e] focus:outline-none focus:border-[#0033a0]/40 focus:ring-2 focus:ring-[#0033a0]/10 transition"
-          />
-          <button
-            type="submit"
-            className="px-6 py-3.5 rounded-xl bg-[#0033a0] text-white font-semibold hover:bg-[#002d8f] transition shadow-lg shadow-[#0033a0]/20"
-          >
-            Join waitlist
-          </button>
-        </form>
+        <WaitlistForm />
       </div>
     </section>
   );
